@@ -43,17 +43,7 @@ public class GraphController : MonoBehaviour
     {
         points.Clear();
         AddGraphs(graphs.Length);
-
-        for (int i = 0; i < 50; i++)
-        {
-            if (Random.Range(0, 3f) > 1)
-            {
-                float x = i;
-                float y = i / 50f + Random.Range(-0.2f, 0.2f) + 0.2f;
-                y = Mathf.Clamp(y, 0, 1);
-                AddPoint(0, x, y);
-            }
-        }
+        // AddTestPoints();
     }
     #endregion
 
@@ -81,6 +71,9 @@ public class GraphController : MonoBehaviour
     {
         canvas.enabled = true;
         lineRenderer.enabled = true;
+        lineRenderer.transform.position = new Vector3(0, 0, lineRenderer.transform.parent.position.z);
+        Vector3 rootGlobalScale = lineRenderer.transform.root.lossyScale;
+        lineRenderer.transform.localScale = new Vector3(1 / rootGlobalScale.x, 1 / rootGlobalScale.y, 1 / rootGlobalScale.z);
         SetGraphTitles();
         SetGraphAxes();
         ClearPoints();
@@ -149,6 +142,19 @@ public class GraphController : MonoBehaviour
     #endregion
 
     #region Private Methods
+    private void AddTestPoints()
+    {
+        for (int i = 0; i < 50; i++)
+        {
+            if (Random.Range(0, 3f) > 1)
+            {
+                float x = i;
+                float y = i / 50f + Random.Range(-0.2f, 0.2f) + 0.2f;
+                y = Mathf.Clamp(y, 0, 1);
+                AddPoint(0, x, y);
+            }
+        }
+    }
 
     private void SetGraphTitles()
     {
@@ -173,7 +179,6 @@ public class GraphController : MonoBehaviour
 
         foreach (Vector2 point in points[currentGraphNum])
         {
-            print("HM");
             RectTransform pointOnGraph = Instantiate(pointPrefab, pointParent).GetComponent<RectTransform>();
 
             float xPos = ((point.x - startValues.x) / increments.x) * distBetweenTicks.x;
@@ -194,7 +199,7 @@ public class GraphController : MonoBehaviour
             {
                 lineRenderer.positionCount++;
                 Vector3 pos = pointOnGraph.position;
-                pos.z -= 1;
+                pos.z = -0.1f;
                 lineRenderer.SetPosition(lineRenderer.positionCount - 1, pos);
             }
         }
