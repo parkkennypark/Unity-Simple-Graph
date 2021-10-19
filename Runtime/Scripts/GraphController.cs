@@ -17,6 +17,7 @@ public class Graph
 public class GraphController : MonoBehaviour
 {
     #region References
+    public static GraphController instance;
     public Transform origin;
     public Transform pointParent;
     public Transform xIncrementParent, yIncrementParent;
@@ -34,6 +35,7 @@ public class GraphController : MonoBehaviour
     public bool logistic = false;
     private int currentGraphNum;
     public Vector2 startValues;
+    public Vector2 incrementOverrides;
     public Vector2 decimalPlaces;
     public Graph[] graphs;
     #endregion
@@ -41,8 +43,12 @@ public class GraphController : MonoBehaviour
     #region Unity Methods
     private void Awake()
     {
+        instance = this;
+
         points.Clear();
         AddGraphs(graphs.Length);
+        SetGraphTitles();
+        SetGraphAxes();
         // AddTestPoints();
     }
     #endregion
@@ -59,6 +65,13 @@ public class GraphController : MonoBehaviour
     public static void AddPoint(int graphNum, float x, float y)
     {
         points[graphNum].Add(new Vector2(x, y));
+
+        if (instance.canvas.enabled == true && graphNum == instance.currentGraphNum)
+        {
+            Vector2 increments = instance.GetIncrements();
+            Vector2 distBetweenTicks = instance.GetDistBetweenTicks();
+            instance.PlotPoint(new Vector2(x, y), increments, distBetweenTicks);
+        }
     }
 
     public void OpenGraph(int graphNum)
@@ -114,6 +127,10 @@ public class GraphController : MonoBehaviour
     public static void ClearPointList()
     {
         points.Clear();
+        if(instance.canvas.enabled)
+        {
+            instance.ClearPoints();
+        }
     }
 
     public void SwitchGraphingMode()
@@ -175,33 +192,39 @@ public class GraphController : MonoBehaviour
     {
         Vector2 distBetweenTicks = GetDistBetweenTicks();
         Vector2 increments = GetIncrements();
+
         lineRenderer.positionCount = 0;
 
         foreach (Vector2 point in points[currentGraphNum])
         {
-            RectTransform pointOnGraph = Instantiate(pointPrefab, pointParent).GetComponent<RectTransform>();
+            PlotPoint(point, increments, distBetweenTicks);
+        }
+    }
 
-            float xPos = ((point.x - startValues.x) / increments.x) * distBetweenTicks.x;
-            float yPos = ((point.y - startValues.y) / (increments.y)) * distBetweenTicks.y;
+    private void PlotPoint(Vector2 point, Vector2 increments, Vector2 distBetweenTicks)
+    {
+        RectTransform pointOnGraph = Instantiate(pointPrefab, pointParent).GetComponent<RectTransform>();
 
-            if (logistic)
-            {
-                xPos = ((Mathf.Log10(point.x + 1)) + 1) * distBetweenTicks.x;
-                yPos = ((Mathf.Log10(point.y + 1)) + 1) * distBetweenTicks.y;
-            }
+        float xPos = ((point.x - startValues.x) / increments.x) * distBetweenTicks.x;
+        float yPos = ((point.y - startValues.y) / (increments.y)) * distBetweenTicks.y;
 
-            float canvasScale = transform.root.localScale.x;
-            pointOnGraph.localPosition = new Vector3(xPos, yPos);
+        if (logistic)
+        {
+            xPos = ((Mathf.Log10(point.x + 1)) + 1) * distBetweenTicks.x;
+            yPos = ((Mathf.Log10(point.y + 1)) + 1) * distBetweenTicks.y;
+        }
 
-            pointOnGraph.GetComponent<Point>().SetupPoint(point, this);
+        float canvasScale = transform.root.localScale.x;
+        pointOnGraph.localPosition = new Vector3(xPos, yPos);
 
-            if (graphs[currentGraphNum].connectPoints)
-            {
-                lineRenderer.positionCount++;
-                Vector3 pos = pointOnGraph.position;
-                pos.z = -0.1f;
-                lineRenderer.SetPosition(lineRenderer.positionCount - 1, pos);
-            }
+        pointOnGraph.GetComponent<Point>().SetupPoint(point, this);
+
+        if (graphs[currentGraphNum].connectPoints)
+        {
+            lineRenderer.positionCount++;
+            Vector3 pos = pointOnGraph.position;
+            pos.z = -0.1f;
+            lineRenderer.SetPosition(lineRenderer.positionCount - 1, pos);
         }
     }
 
@@ -252,6 +275,11 @@ public class GraphController : MonoBehaviour
 
     private Vector2 GetIncrements()
     {
+        if (incrementOverrides != new Vector2())
+        {
+            return incrementOverrides;
+        }
+
         // get max x and y values
         float maxX = 0;
         float maxY = 0;
